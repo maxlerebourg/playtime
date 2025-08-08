@@ -1,9 +1,9 @@
 version: 2
 
-project_name: wicketkeeper
+project_name: playtime
 
 builds:
-  - dir: ./server
+  - dir: ./
     mod_timestamp: '{{ .CommitTimestamp }}'
     env:
       - CGO_ENABLED=0

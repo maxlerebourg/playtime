@@ -1,0 +1,9 @@
+FROM alpine AS final
+
+COPY playtime /playtime
+
+EXPOSE 3000
+
+USER nonroot:nonroot
+
+ENTRYPOINT ["./playtime"]
