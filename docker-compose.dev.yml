@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  playtime:
+    build: .
+    container_name: "playtime"
+    volumes:
+      - "./data:/data"
+      - "./uploads:/uploads"
+    ports:
+      - 3000:3000
