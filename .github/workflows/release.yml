@@ -32,7 +32,6 @@ jobs:
           check-latest: true
       - name: Install go dependencies
         run: |
-          cd server
           go mod vendor
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
