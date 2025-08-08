@@ -4,6 +4,4 @@ COPY playtime /playtime
 
 EXPOSE 3000
 
-USER nonroot:nonroot
-
 ENTRYPOINT ["./playtime"]
