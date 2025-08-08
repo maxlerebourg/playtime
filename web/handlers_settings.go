@@ -290,9 +290,10 @@ func settingsCollectControls(c echo.Context) [4]storage.EmulatorControls {
 				SlowMotion:      settingsReadControlButton(c, input, player, "slow-motion"),
 				Rewind:          settingsReadControlButton(c, input, player, "rewind"),
 			}
-			if input == "keyboard" {
+			switch {
+			case input == "keyboard":
 				controls[player].Keyboard = mapping
-			} else if input == "gamepad" {
+			case input == "gamepad":
 				controls[player].Gamepad = mapping
 			}
 		}

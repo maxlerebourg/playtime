@@ -47,13 +47,18 @@ func (s *Storage) SaveUploadedFile(file *multipart.FileHeader, id, extension str
 	if err != nil {
 		return err
 	}
-	defer src.Close()
+	defer func() {
+		_ = src.Close()
+	}()
 
 	dst, err := os.Create(fileName)
 	if err != nil {
 		return err
 	}
-	defer dst.Close()
+	defer func() {
+		_ = dst.Close()
+	}()
+
 
 	if _, err := io.Copy(dst, src); err != nil {
 		return err
