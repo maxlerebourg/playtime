@@ -54,7 +54,7 @@
         window.ControlSchemeVariant = 'host';
         window._csrf = '{{ _csrf_token }}';
 
-        window.EJS_pathtodata = '/assets/emulatorjs/';
+        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
         window.EJS_player = '#game';
         window.EJS_core = '{{ emulator_settings.Core }}';
         window.EJS_gameUrl = '{{ game.DownloadLink }}';
@@ -74,9 +74,9 @@
             window.EJS_DEBUG_XX = true;
         {% endif %}
 
-        {% if bios.Url %}
-            window.EJS_biosUrl = '{{ bios.Url }}';
-        {% endif %}
+        // {% if bios.Url %}
+        //     window.EJS_biosUrl = '{{ bios.Url }}';
+        // {% endif %}
 
         {% if emulator_settings.Threads %}
             window.EJS_threads = true;
@@ -103,7 +103,7 @@
     {% include "includes/play_control_scheme.twig" %}
     {% include "includes/play_load_state.twig" %}
 
-    <script src="/assets/emulatorjs/loader.js"></script>
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
     <script src="/assets/ui-utils.js"></script>
     <script src="/assets/play-states.js"></script>
     <script src="/assets/play-virtual-gamepad.js"></script>

@@ -161,8 +161,37 @@ func (s *Storage) UserEnsureExists() error {
 	if cnt > 0 {
 		return nil
 	}
+	
+	parts := strings.Split(s.config.DatabasePath, string(os.PathSeparator))
+	parts[len(parts)-1] = "admin.password"
 
-	password := GenerateRandomString(10)
+	f, err := os.OpenFile(path.Join(parts...), os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		log.Errorf("unable to open admin.password file: %s", err)
+		return nil
+	}
+	defer func () {
+		if err := f.Close(); err != nil {
+			log.Errorf("unable to close admin.password file: %s", err)
+		}
+	}()
+	
+	fileInfo, err := f.Stat()
+	if err != nil {
+			log.Errorf("unable to get file info: %s", err)
+			return nil
+	}
+	rawPassword := make([]byte, fileInfo.Size())
+	nbByte, err := f.Read(rawPassword)
+	if err != nil {
+			log.Errorf("unable to read admin.password file: %s", err)
+			return nil
+	}
+
+	password := strings.TrimSpace(string(rawPassword))
+	if password == "" {
+		password = GenerateRandomString(10)
+	}
 	encrypted, err := EncryptPassword(password)
 	if err != nil {
 		return err
@@ -179,23 +208,15 @@ func (s *Storage) UserEnsureExists() error {
 		return err
 	}
 
+	if nbByte > 0 {
+		return nil
+	}
 	log.Infof(">>> ================================================")
 	log.Infof(">>> created default admin user: login=%s password=%s", u.Login, password)
 	log.Infof(">>> ================================================")
 
-	parts := strings.Split(s.config.DatabasePath, string(os.PathSeparator))
-	parts[len(parts)-1] = "admin.password"
-	f, err := os.OpenFile(path.Join(parts...), os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		log.Errorf("unable to open admin.password file: %s", err)
-		return nil
-	}
 	if _, err := f.WriteString(password); err != nil {
 		log.Errorf("unable to write to admin.password file: %s", err)
-		return nil
-	}
-	if err := f.Close(); err != nil {
-		log.Errorf("unable to close admin.password file: %s", err)
 		return nil
 	}
 

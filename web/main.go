@@ -94,7 +94,7 @@ func New(config *Configuration, storage *storage.Storage) *Server {
 		HSTSMaxAge:            0,
 		HSTSExcludeSubdomains: false,
 		HSTSPreloadEnabled:    false,
-		ContentSecurityPolicy: "connect-src 'self' blob:; font-src 'self' data:; form-action 'self'; frame-ancestors 'self'; frame-src 'self'; img-src 'self' data:; manifest-src 'self'; media-src 'self'; object-src 'self'; child-src 'self' blob:",
+		ContentSecurityPolicy: "connect-src cdn.emulatorjs.org 'self' blob:; font-src fonts.gstatic.com cdn.jsdelivr.net 'self' data:; form-action 'self'; frame-ancestors 'self'; frame-src 'self'; img-src 'self' data:; manifest-src 'self'; media-src 'self'; object-src 'self'; child-src 'self' blob:",
 	}))
 	e.Use(s.contextCustomizationMiddleware)
 

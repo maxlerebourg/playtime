@@ -1,4 +1,4 @@
-import Tags from '/assets/node_modules/bootstrap5-tags/tags.js'
+import Tags from 'https://cdn.jsdelivr.net/npm/bootstrap5-tags@1.7.15/tags.min.js'
 
 (() => {
 
