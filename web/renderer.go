@@ -37,22 +37,6 @@ type pongo2Renderer struct {
 	set    *pongo2.TemplateSet
 }
 
-func getAllFilenames(efs fs.FS) (files []string, err error) {
-	if err := fs.WalkDir(efs, ".", func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
-			return nil
-		}
- 
-		files = append(files, path)
-
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-	log.Infof("%w", files)
-	return files, nil
-}
-
 func newPongo2Renderer(config *Configuration) pongo2Renderer {
 	loader := &EmbedFileSystemLoader{fs: config.TemplatesFS}
 	set := pongo2.NewSet("echo", loader)
