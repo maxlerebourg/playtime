@@ -1,11 +1,11 @@
 package localization
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	log "github.com/sirupsen/logrus"
-	"os"
 	"slices"
 	"strings"
 )
@@ -30,10 +30,10 @@ var (
 	items         []Item
 )
 
-func init() {
+func Init(assetsFS embed.FS) {
 	localizations = make(map[string]Localization)
 
-	files, err := os.ReadDir("assets/l10n")
+	files, err := assetsFS.ReadDir("assets/l10n")
 	if err != nil {
 		log.Fatalf("unable to read l10n files: %s", err)
 	}
@@ -45,7 +45,7 @@ func init() {
 
 		code := strings.TrimSuffix(file.Name(), ".json")
 
-		contents, err := os.ReadFile(fmt.Sprintf("assets/l10n/%s", file.Name()))
+		contents, err := assetsFS.ReadFile(fmt.Sprintf("assets/l10n/%s", file.Name()))
 		if err != nil {
 			log.Errorf("unable to read l10n file %s: %s", file.Name(), err)
 			continue

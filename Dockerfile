@@ -11,9 +11,6 @@ FROM alpine
 
 COPY --from=go /playtime /playtime
 
-COPY assets /assets/
-COPY templates /templates/
-
 RUN mkdir -m 0777 /data /uploads
 
 EXPOSE 3000

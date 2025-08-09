@@ -1,9 +1,12 @@
 package web
 
 import (
+	"embed"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	log "github.com/sirupsen/logrus"
+	"io/fs"
+	"net/http"
 	"playtime/storage"
 	"playtime/web/gamesession"
 	"playtime/web/heartbeatpool"
@@ -21,12 +24,14 @@ const (
 
 type Configuration struct {
 	AssetsRoot  string
+	AssetsFS    embed.FS
 	UploadsRoot string
 	Listen      string
 
 	//templates
 	TemplatesDebug     bool
 	TemplatesRoot      string
+	TemplatesFS        embed.FS
 	TemplatesExtension string
 
 	//emulator
@@ -51,11 +56,20 @@ type Server struct {
 	heartbeatStop   chan bool
 }
 
+func getFileSystem(config *Configuration) http.FileSystem {
+	fsys, err := fs.Sub(config.AssetsFS, "assets")
+	if err != nil {
+		panic(err)
+	}
+	return http.FS(fsys)
+}
+
 func New(config *Configuration, storage *storage.Storage) *Server {
 	e := echo.New()
 	e.Renderer = newPongo2Renderer(config)
 	e.HTTPErrorHandler = httpErrorHandler
-	e.Static(AssetsWebRoot, config.AssetsRoot)
+	assetsHandler := http.FileServer(getFileSystem(config))
+	e.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", assetsHandler)))
 	e.Static(UploadsWebRoot, config.UploadsRoot)
 	e.Use(middleware.Recover())
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{

@@ -1,24 +1,63 @@
 package web
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/flosch/pongo2/v6"
 	"github.com/labstack/echo/v4"
 	log "github.com/sirupsen/logrus"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
+	"path/filepath"
 	"playtime/web/localization"
 	"strings"
 )
 
+type EmbedFileSystemLoader struct {
+	fs fs.FS
+}
+
+func (l *EmbedFileSystemLoader) Abs(base, name string) string {
+	return filepath.Join(filepath.Dir(base), name)
+}
+
+func (l *EmbedFileSystemLoader) Get(path string) (io.Reader, error) {
+	data, err := fs.ReadFile(l.fs, path)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewReader(data), nil
+}
+
 type pongo2Renderer struct {
 	config *Configuration
+	set    *pongo2.TemplateSet
+}
+
+func getAllFilenames(efs fs.FS) (files []string, err error) {
+	if err := fs.WalkDir(efs, ".", func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+ 
+		files = append(files, path)
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	log.Infof("%w", files)
+	return files, nil
 }
 
 func newPongo2Renderer(config *Configuration) pongo2Renderer {
-	return pongo2Renderer{config: config}
+	loader := &EmbedFileSystemLoader{fs: config.TemplatesFS}
+	set := pongo2.NewSet("echo", loader)
+	localization.Init(config.AssetsFS)
+	return pongo2Renderer{config: config, set: set}
 }
 
 func (r pongo2Renderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
@@ -34,9 +73,9 @@ func (r pongo2Renderer) Render(w io.Writer, name string, data interface{}, c ech
 	var t *pongo2.Template
 	var err error
 	if r.config.TemplatesDebug {
-		t, err = pongo2.FromFile(r.resolveTemplateName(name))
+		t, err = r.set.FromFile(r.resolveTemplateName(name))
 	} else {
-		t, err = pongo2.FromCache(r.resolveTemplateName(name))
+		t, err = r.set.FromCache(r.resolveTemplateName(name))
 	}
 	if err != nil {
 		return err

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"flag"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -8,6 +9,11 @@ import (
 	"playtime/web"
 	"strings"
 )
+
+//go:embed templates
+var staticTemplates embed.FS
+//go:embed assets
+var staticAssets embed.FS
 
 var (
 	storageConfig *storage.Configuration
@@ -69,11 +75,13 @@ func init() {
 	}
 	webConfig = &web.Configuration{
 		AssetsRoot:  "assets",
+		AssetsFS:    staticAssets,
 		UploadsRoot: *uploadsPathPtr,
 		Listen:      *listenPtr,
 
 		TemplatesDebug:     *debugTemplatesPtr,
 		TemplatesRoot:      "templates",
+		TemplatesFS:        staticTemplates,
 		TemplatesExtension: "twig",
 
 		EmulatorDebug: *debugEmulatorPtr,

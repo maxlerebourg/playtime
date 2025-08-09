@@ -1,8 +1,5 @@
 FROM alpine AS final
 
-COPY assets /assets/
-COPY templates /templates/
-
 RUN mkdir -m 0777 /data /uploads
 
 COPY playtime /playtime
