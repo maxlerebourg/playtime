@@ -2,11 +2,8 @@ package storage
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"mime/multipart"
-	"os"
-	"path"
 	"regexp"
 	"strings"
 )
@@ -16,72 +13,24 @@ const (
 	FileExtensionScreenshot = "png"
 )
 
-func (s *Storage) prepareUploadPath(id string) (string, error) {
-	uploadPath, err := GetUploadPath(id)
-	if err != nil {
-		return "", err
-	}
-
-	uploadPath = fmt.Sprintf("%s%c%s", s.config.UploadsPath, os.PathSeparator, uploadPath)
-
-	if err := os.MkdirAll(uploadPath, 0777); err != nil {
-		return "", err
-	}
-
-	return uploadPath, nil
-}
-
 func (s *Storage) SaveUploadedFile(file *multipart.FileHeader, id, extension string) error {
-	uploadPath, err := s.prepareUploadPath(id)
-	if err != nil {
-		return err
-	}
-
-	fileName := id
-	if len(extension) != 0 {
-		fileName += "." + extension
-	}
-	fileName = path.Join(uploadPath, fileName)
-
-	src, err := file.Open()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = src.Close()
-	}()
-
-	dst, err := os.Create(fileName)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = dst.Close()
-	}()
-
-
-	if _, err := io.Copy(dst, src); err != nil {
-		return err
-	}
-
-	return nil
+	return s.fileStore.Save(file, id, extension)
 }
 
 func (s *Storage) removeUploadedFile(id, extension string) error {
-	uploadPath, err := GetUploadPath(id)
-	if err != nil {
-		return err
-	}
-
-	if len(extension) != 0 {
-		id = id + "." + extension
-	}
-
-	fullPath := fmt.Sprintf("%s%c%s%c%s", s.config.UploadsPath, os.PathSeparator, uploadPath, os.PathSeparator, id)
-
-	return os.Remove(fullPath)
+	return s.fileStore.Delete(id, extension)
 }
 
+func (s *Storage) OpenUpload(id, extension string) (io.ReadCloser, int64, error) {
+	return s.fileStore.Open(id, extension)
+}
+
+func (s *Storage) HeadUpload(id, extension string) (int64, error) {
+	return s.fileStore.Head(id, extension)
+}
+
+// GetUploadPath returns the slash-separated directory path for a given ID,
+// used both for constructing file paths and URL segments.
 func GetUploadPath(id string) (string, error) {
 	if len(id) == 0 {
 		return "", errors.New("id is empty")
@@ -103,5 +52,5 @@ func GetUploadPath(id string) (string, error) {
 		}
 	}
 
-	return strings.Join(parts, string(os.PathSeparator)), nil
+	return strings.Join(parts, "/"), nil
 }

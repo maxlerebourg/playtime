@@ -113,10 +113,46 @@ Usage of ./app:
   -turn-server-user string
         TURN/STUN/ICE server user name (if required)
   -uploads-path string
-        uploads path (default "uploads")
+        local uploads path, ignored when -s3-bucket is set (default "uploads")
   -verbose
         show debug output
+  -s3-bucket string
+        S3 bucket name (enables S3 storage when set)
+  -s3-region string
+        S3 region (default "us-east-1")
+  -s3-endpoint string
+        S3 custom endpoint URL, for MinIO or S3-compatible services
+  -s3-access-key-id string
+        S3 access key ID
+  -s3-secret-access-key string
+        S3 secret access key
+  -s3-use-path-style
+        use path-style S3 URLs, required for MinIO
 ```
+
+## S3 storage
+
+By default playtime stores uploaded files in a local directory (`-uploads-path`). Setting `-s3-bucket` switches to S3-compatible object storage instead.
+
+Game ROMs and save states are stored as objects under their ID-based path. Metadata (game info, save state info) is stored as JSON under `_meta/game/` and `_meta/savestate/` prefixes. On startup, the database is automatically rebuilt from these metadata files — so losing the local database is not a problem.
+
+Example with AWS S3:
+
+```bash
+./app -s3-bucket my-playtime-bucket -s3-region eu-west-1 \
+      -s3-access-key-id AKIAIOSFODNN7EXAMPLE \
+      -s3-secret-access-key wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+```
+
+Example with MinIO:
+
+```bash
+./app -s3-bucket playtime -s3-endpoint http://minio:9000 \
+      -s3-access-key-id minioadmin -s3-secret-access-key minioadmin \
+      -s3-use-path-style
+```
+
+If no credentials are provided, the AWS default credential chain is used (instance profile, `~/.aws/credentials`, environment variables, etc.).
 
 ## docker
 
@@ -139,9 +175,26 @@ Available image environment variables:
 Exposed volumes:
 
 * `/app/data` - database directory
-* `/app/uploads` - uploads directory
+* `/app/uploads` - uploads directory (not needed when using S3)
 
 Exposed default port `3000`.
+
+Example `docker-compose.yml` with S3:
+
+```yaml
+services:
+  playtime:
+    image: playtime:latest
+    volumes:
+      - "./data:/data"
+    ports:
+      - 3000:3000
+    command:
+      - "--s3-bucket=my-playtime-bucket"
+      - "--s3-region=eu-west-1"
+      - "--s3-access-key-id=AKIAIOSFODNN7EXAMPLE"
+      - "--s3-secret-access-key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+```
 
 ## Netplay
 

@@ -9,6 +9,9 @@ import (
 
 const PasswordEncryptionCost = 15
 
+// AdminUserId is the fixed ID for the built-in admin account.
+const AdminUserId = "00000000-0000-0000-0000-000000000001"
+
 func NewId() string {
 	id, err := uuid.NewUUID()
 	if err != nil {

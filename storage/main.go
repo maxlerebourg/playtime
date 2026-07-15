@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/timshannon/bolthold"
@@ -13,14 +14,25 @@ import (
 	"time"
 )
 
+type S3Configuration struct {
+	Bucket          string
+	Region          string
+	Endpoint        string
+	AccessKeyId     string
+	SecretAccessKey string
+	UsePathStyle    bool
+}
+
 type Configuration struct {
 	DatabasePath string
 	UploadsPath  string
+	S3           *S3Configuration
 }
 
 type Storage struct {
 	store       *bolthold.Store
 	config      *Configuration
+	fileStore   FileStore
 	quotaUsed   map[string]int64
 	quotaUsedMx sync.RWMutex
 }
@@ -31,9 +43,20 @@ func New(config *Configuration) (*Storage, error) {
 		return nil, err
 	}
 
+	var fs FileStore
+	if config.S3 != nil {
+		fs, err = newS3FileStore(*config.S3)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		fs = newLocalFileStore(config.UploadsPath)
+	}
+
 	return &Storage{
 		store:     s,
 		config:    config,
+		fileStore: fs,
 		quotaUsed: make(map[string]int64),
 	}, nil
 }
@@ -159,7 +182,7 @@ func (s *Storage) UserEnsureExists() error {
 		return err
 	}
 	if cnt > 0 {
-		return nil
+		return s.userEnsureAdminId()
 	}
 	
 	parts := strings.Split(s.config.DatabasePath, string(os.PathSeparator))
@@ -198,6 +221,7 @@ func (s *Storage) UserEnsureExists() error {
 	}
 
 	u := User{
+		Id:       AdminUserId,
 		Login:    "admin",
 		Password: encrypted,
 		Admin:    true,
@@ -221,6 +245,45 @@ func (s *Storage) UserEnsureExists() error {
 	}
 
 	return nil
+}
+
+// userEnsureAdminId migrates the admin user to AdminUserId if it has a different ID.
+func (s *Storage) userEnsureAdminId() error {
+	var admin User
+	if err := s.store.FindOne(&admin, bolthold.Where("Login").Eq("admin")); err != nil {
+		return nil // no admin user, nothing to migrate
+	}
+	if admin.Id == AdminUserId {
+		return nil
+	}
+
+	oldId := admin.Id
+	log.Infof("migrating admin user ID from %s to %s", oldId, AdminUserId)
+
+	if err := s.store.UpdateMatching(&Game{}, bolthold.Where("UserId").Eq(oldId), func(record interface{}) error {
+		record.(*Game).UserId = AdminUserId
+		return nil
+	}); err != nil {
+		return err
+	}
+	if err := s.store.UpdateMatching(&SaveState{}, bolthold.Where("UserId").Eq(oldId), func(record interface{}) error {
+		record.(*SaveState).UserId = AdminUserId
+		return nil
+	}); err != nil {
+		return err
+	}
+	if err := s.store.UpdateMatching(&Settings{}, bolthold.Where(bolthold.Key).Eq(oldId), func(record interface{}) error {
+		record.(*Settings).UserId = AdminUserId
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	admin.Id = AdminUserId
+	if err := s.store.Upsert(AdminUserId, admin); err != nil {
+		return err
+	}
+	return s.store.Delete(oldId, User{})
 }
 
 func (s *Storage) userQuotaUsed(id string) (int64, error) {
@@ -387,6 +450,11 @@ func (s *Storage) GameSave(g Game) (Game, error) {
 	if err := s.store.Upsert(g.Id, g); err != nil {
 		return g, err
 	}
+	if data, err := json.Marshal(g); err == nil {
+		if err := s.fileStore.SaveMeta(metaKindGame, g.Id, data); err != nil {
+			log.Warnf("failed to write game meta to S3 for %s: %s", g.Id, err)
+		}
+	}
 	return g, nil
 }
 
@@ -450,6 +518,9 @@ func (s *Storage) GameDeleteById(id string) error {
 
 	if err := s.removeUploadedFile(id, ""); err != nil {
 		return err
+	}
+	if err := s.fileStore.DeleteMeta(metaKindGame, id); err != nil {
+		log.Warnf("failed to delete game meta from S3 for %s: %s", id, err)
 	}
 
 	s.userQuotaUsedInvalidate(game.UserId)
@@ -545,6 +616,11 @@ func (s *Storage) SaveStateSave(ss SaveState) (SaveState, error) {
 	if err := s.store.Upsert(ss.Id, ss); err != nil {
 		return ss, err
 	}
+	if data, err := json.Marshal(ss); err == nil {
+		if err := s.fileStore.SaveMeta(metaKindSaveState, ss.Id, data); err != nil {
+			log.Warnf("failed to write savestate meta to S3 for %s: %s", ss.Id, err)
+		}
+	}
 
 	return ss, nil
 }
@@ -608,6 +684,9 @@ func (s *Storage) SaveStateDeleteById(id string) error {
 
 	if err := s.removeUploadedFile(id, FileExtensionScreenshot); err != nil {
 		return err
+	}
+	if err := s.fileStore.DeleteMeta(metaKindSaveState, id); err != nil {
+		log.Warnf("failed to delete savestate meta from S3 for %s: %s", id, err)
 	}
 
 	s.userQuotaUsedInvalidate(state.UserId)

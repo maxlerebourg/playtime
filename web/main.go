@@ -23,10 +23,9 @@ const (
 )
 
 type Configuration struct {
-	AssetsRoot  string
-	AssetsFS    embed.FS
-	UploadsRoot string
-	Listen      string
+	AssetsRoot string
+	AssetsFS   embed.FS
+	Listen     string
 
 	//templates
 	TemplatesDebug     bool
@@ -70,7 +69,6 @@ func New(config *Configuration, storage *storage.Storage) *Server {
 	e.HTTPErrorHandler = httpErrorHandler
 	assetsHandler := http.FileServer(getFileSystem(config))
 	e.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", assetsHandler)))
-	e.Static(UploadsWebRoot, config.UploadsRoot)
 	e.Use(middleware.Recover())
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 		LogURI:    true,
@@ -115,7 +113,8 @@ func New(config *Configuration, storage *storage.Storage) *Server {
 	e.GET("/", s.index)
 
 	e.HEAD(AssetsWebRoot+"*", s.assetsHead)
-	e.HEAD(UploadsWebRoot+"*", s.uploadsHead)
+	e.GET(UploadsWebRoot+"/*", s.uploadsGet)
+	e.HEAD(UploadsWebRoot+"/*", s.uploadsHead)
 
 	//authentication
 	login := e.Group("/login")

@@ -3,9 +3,33 @@ version: '3'
 services:
   playtime:
     build: .
-    container_name: "playtime"
+    container_name: playtime
     volumes:
       - "./data:/data"
+      # Not needed when using S3 storage:
       - "./uploads:/uploads"
-    ports:
-      - 3000:3000
+    network_mode: host
+  #   Uncomment and configure to use S3 storage instead of local uploads:
+  #   command:
+  #     - "--s3-bucket=playtime"
+  #     - "--s3-region=us-east-1"
+  #     - "--s3-access-key-id=5wsYHQu8BPIPXrOA"
+  #     - "--s3-secret-access-key=1i3pWSErthJtfY20ZGA9cF9LYmfCd76D"
+  #     # For MinIO or S3-compatible services, also add:
+  #     - "--s3-endpoint=http://127.0.0.1:9000"
+  #     - "--s3-use-path-style"
+
+  # versity:
+  #   image: ghcr.io/versity/versitygw:v1.4.0
+  #   command: ["posix", "/tmp/data"]
+  #   network_mode: host
+  #   volumes:
+  #     - ./tmp/s3:/tmp/data
+  #     - ./tmp/.iam:/tmp/.iam
+  #   environment:
+  #     VGW_IAM_DIR: /tmp/.iam
+  #     ROOT_ACCESS_KEY: admin
+  #     ROOT_SECRET_KEY: admin
+  #     VGW_REGION: us-east-1
+  #     VGW_PORT: 127.0.0.1:9000
+  #     VGW_WEBUI_S3_PREFIX: /ui

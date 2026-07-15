@@ -1,4 +1,4 @@
-FROM golang:1.24-alpine AS go
+FROM golang:1.26-alpine AS go
 
 RUN mkdir build
 
@@ -12,7 +12,5 @@ FROM alpine
 COPY --from=go /playtime /playtime
 
 RUN mkdir -m 0777 /data /uploads
-
-EXPOSE 3000
 
 ENTRYPOINT ["/playtime"]

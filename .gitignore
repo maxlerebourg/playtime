@@ -11,3 +11,4 @@
 /uploads/
 /__debug*
 .DS_Store
+/tmp
