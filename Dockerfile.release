@@ -2,8 +2,8 @@ FROM alpine AS final
 
 RUN mkdir -m 0777 /data /uploads
 
-COPY playtime /playtime
+ARG TARGETPLATFORM
 
-EXPOSE 3000
+COPY $TARGETPLATFORM/playtime /playtime
 
-ENTRYPOINT ["./playtime"]
+ENTRYPOINT ["/playtime"]
